@@ -96,7 +96,7 @@ public final class InputLogic {
     public void setFacilitator(DictionaryFacilitator facilitator) { // only for active gesture data gathering, remove when data gathering phase is done (end of 2026 latest)
         if (mDictionaryFacilitator == facilitator) return;
         mDictionaryFacilitator = facilitator;
-        mSuggest = new Suggest(mDictionaryFacilitator);
+        mSuggest = new Suggest(mDictionaryFacilitator, mLatinIME);
     }
 
     public LastComposedWord mLastComposedWord = LastComposedWord.NOT_A_COMPOSED_WORD;
@@ -139,7 +139,7 @@ public final class InputLogic {
         mWordComposer = new WordComposer();
         mConnection = new RichInputConnection(latinIME);
         mInputLogicHandler = new InputLogicHandler(mLatinIME.mHandler, this);
-        mSuggest = new Suggest(dictionaryFacilitator);
+        mSuggest = new Suggest(dictionaryFacilitator, mLatinIME);
         mDictionaryFacilitator = dictionaryFacilitator;
     }
 

@@ -6,6 +6,7 @@
 package helium314.keyboard.latin
 
 import android.text.TextUtils
+import android.content.Context
 import com.android.inputmethod.latin.utils.BinaryDictionaryUtils
 import helium314.keyboard.keyboard.Keyboard
 import helium314.keyboard.keyboard.internal.keyboard_parser.getEmojiDefaultVersion
@@ -32,10 +33,11 @@ import kotlin.math.min
  * This class loads a dictionary and provides a list of suggestions for a given sequence of
  * characters. This includes corrections and completions.
  */
-class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
+class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator, context: Context) {
     private var mAutoCorrectionThreshold = 0f
     private val mPlausibilityThreshold = 0f
     private val nextWordSuggestionsCache = HashMap<NgramContext, SuggestionResults>()
+    private val synonymProvider by lazy { SynonymProvider(context) }
 
     // cache cleared whenever LatinIME.loadSettings is called, notably on changing layout and switching input fields
     fun clearNextWordSuggestionsCache() = nextWordSuggestionsCache.clear()
@@ -72,7 +74,12 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
                       isCorrectionEnabled: Boolean, sequenceNumber: Int): SuggestedWords {
         val typedWordString = wordComposer.typedWord
         val resultsArePredictions = !wordComposer.isComposingWord
-        val suggestionResults = if (typedWordString.isEmpty())
+        val lastCommittedWord = ngramContext.getNthPrevWord(1) // the word just typed
+        val synonymResults = if (typedWordString.isEmpty() && lastCommittedWord != null && lastCommittedWord.length > 2)
+                synonymProvider.getSynonyms(lastCommittedWord.toString(), maxResults = 3)
+            else emptyList()
+
+        val suggestionResults = if (typedWordString.isEmpty() && synonymResults.isEmpty())
                 getNextWordSuggestions(ngramContext, keyboard, inputStyleIfNotPrediction, settingsValuesForSuggestion)
             else mDictionaryFacilitator.getSuggestionResults(wordComposer.composedDataSnapshot, ngramContext, keyboard,
                 settingsValuesForSuggestion, SESSION_ID_TYPING, inputStyleIfNotPrediction)
@@ -111,6 +118,27 @@ class Suggest(private val mDictionaryFacilitator: DictionaryFacilitator) {
             SuggestedWordInfo.NOT_AN_INDEX , SuggestedWordInfo.NOT_A_CONFIDENCE)
         if (typedWordString.isNotEmpty()) {
             suggestionsContainer.add(0, typedWordInfo)
+        }
+        val rawTypedWord = wordComposer.typedWord
+        val synonymsToShow = if (rawTypedWord.length > 2)
+            synonymProvider.getSynonyms(rawTypedWord, maxResults = 3) // while typing
+        else
+            synonymResults  // after committing a word (prediction slot)
+        if (synonymsToShow.isNotEmpty()) {
+            synonymsToShow.forEachIndexed { index, syn ->
+              suggestionsContainer.add(
+              minOf(index + 1, suggestionsContainer.size),
+              SuggestedWordInfo(
+                syn,
+                "",
+                SuggestedWordInfo.MAX_SCORE,
+                SuggestedWordInfo.KIND_SYNONYM,
+                Dictionary.DICTIONARY_USER_TYPED,
+                SuggestedWordInfo.NOT_AN_INDEX,
+                SuggestedWordInfo.NOT_A_CONFIDENCE
+              )
+            )
+          }
         }
         val suggestionsList = if (SuggestionStripView.DEBUG_SUGGESTIONS && suggestionsContainer.isNotEmpty())
                 getSuggestionsInfoListWithDebugInfo(capitalizedTypedWord, suggestionsContainer)

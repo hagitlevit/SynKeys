@@ -78,6 +78,8 @@ final class SuggestionStripLayoutHelper {
     private final int mColorValidTypedWord;
     private final int mColorTypedWord;
     private final int mColorAutoCorrect;
+    private final int mColorSynonym;
+    private final int mColorCorrection;
     private final int mColorSuggested;
     private final float mAlphaObsoleted;
     private final float mCenterSuggestionWeight;
@@ -123,6 +125,8 @@ final class SuggestionStripLayoutHelper {
         mColorTypedWord = colors.get(ColorType.SUGGESTION_TYPED_WORD);
         mColorAutoCorrect = colors.get(ColorType.SUGGESTION_AUTO_CORRECT);
         mColorSuggested = colors.get(ColorType.SUGGESTED_WORD);
+        mColorSynonym = Color.parseColor("#2196F3");   // blue
+        mColorCorrection = Color.parseColor("#F44336"); // red
         final int colorMoreSuggestionsHint = colors.get(ColorType.MORE_SUGGESTIONS_HINT);
 
         mSuggestionsCountInStrip = a.getInt(
@@ -294,6 +298,10 @@ final class SuggestionStripLayoutHelper {
             color = mColorValidTypedWord;
         } else if (isTypedWord) {
             color = mColorTypedWord;
+        } else if (suggestedWords.getInfo(indexInSuggestedWords).isKindOf(SuggestedWordInfo.KIND_SYNONYM)) {
+            color = mColorSynonym;
+        } else if (suggestedWords.getInfo(indexInSuggestedWords).isKindOf(SuggestedWordInfo.KIND_CORRECTION)) {
+            color = mColorCorrection;
         } else {
             color = mColorSuggested;
         }
